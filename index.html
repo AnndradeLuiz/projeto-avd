@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Filas RU · UFOPA — Jantar</title>
+  <meta name="theme-color" content="#F6F3EC">
+  <meta name="description" content="Contagem unificada da esteira do Jantar no Restaurante Universitário da UFOPA para Cadeias de Markov.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app-container">
+
+    <!-- ==============================================================
+         TELA 1: OPERAÇÃO UNIFICADA (ESTEIRA DO JANTAR)
+         ============================================================== -->
+    <main id="view-operacao" class="view active">
+      <!-- Cabeçalho Superior -->
+      <header class="main-header">
+        <div>
+          <h1 class="brand-title">Filas RU · UFOPA</h1>
+          <div class="brand-subtitle" id="relogio-atual">Jantar · Hoje --:--:--</div>
+        </div>
+        <div class="header-actions">
+          <span id="sync-pill" class="sync-pill synced">Tudo salvo</span>
+          <button id="btn-abrir-admin" class="btn-admin" type="button" title="Painel de Administração">
+            <span>⚙️</span> Admin
+          </button>
+        </div>
+      </header>
+
+      <!-- Faixa de Métricas ao Vivo -->
+      <div class="live-strip" style="grid-template-columns: repeat(4, 1fr);">
+        <div class="live-strip-item">
+          <div class="live-strip-label">Fila Catraca</div>
+          <div class="live-strip-val mono-num" id="stat-catraca-fila">0</div>
+        </div>
+        <div class="live-strip-item">
+          <div class="live-strip-label">No Leitor</div>
+          <div class="live-strip-val mono-num" id="stat-catraca-atend">0</div>
+        </div>
+        <div class="live-strip-item">
+          <div class="live-strip-label">Fila Comida</div>
+          <div class="live-strip-val mono-num" id="stat-fila-comida">0</div>
+        </div>
+        <div class="live-strip-item">
+          <div class="live-strip-label">No Balcão</div>
+          <div class="live-strip-val mono-num" id="stat-balcao">0</div>
+        </div>
+      </div>
+
+      <!-- ETAPA 1: CATRACA (FILA EXTERNA + NO LEITOR/ASSINANDO) -->
+      <section class="pipeline-section">
+        <div class="section-title-bar">
+          <span class="section-badge">
+            <span>🎟️</span> 1. Catraca (QR Code / Assinatura)
+          </span>
+          <span class="section-counter mono-num" id="count-catraca-total">0 pessoas</span>
+        </div>
+
+        <!-- Subetapa: No Leitor / Atendendo -->
+        <div style="background-color: #FAF5EE; padding: 6px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--amber); letter-spacing: 0.05em; border-bottom: 1px solid var(--border-light);">
+          No leitor / Validando agora
+        </div>
+        <div id="lista-catraca-atend">
+          <div class="empty-state" style="padding: 12px;">Ninguém no leitor no momento</div>
+        </div>
+
+        <!-- Subetapa: Na Fila de Espera -->
+        <div style="background-color: #F8F7F4; padding: 6px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.05em; border-top: 1px solid var(--border-light); border-bottom: 1px solid var(--border-light);">
+          Aguardando a vez na fila externa
+        </div>
+        <div id="lista-catraca-fila">
+          <div class="empty-state">Fila da catraca vazia</div>
+        </div>
+      </section>
+
+      <!-- ETAPA 2: FILA DA COMIDA (ESPERA INTERNA) -->
+      <section class="pipeline-section">
+        <div class="section-title-bar">
+          <span class="section-badge">
+            <span>🚶</span> 2. Fila da Comida
+          </span>
+          <span class="section-counter mono-num" id="count-comida">0 aguardando</span>
+        </div>
+        <div id="lista-comida">
+          <div class="empty-state">Ninguém aguardando a comida</div>
+        </div>
+      </section>
+
+      <!-- ETAPA 3: BALCÃO / SERVINDO REFEIÇÃO -->
+      <section class="pipeline-section">
+        <div class="section-title-bar">
+          <span class="section-badge">
+            <span>🍱</span> 3. Balcão (Com a Bandeja)
+          </span>
+          <span class="section-counter mono-num" id="count-balcao">0 servindo</span>
+        </div>
+        <div id="lista-balcao">
+          <div class="empty-state">Ninguém pegando comida agora</div>
+        </div>
+      </section>
+
+      <!-- Botão Gigante Fixo no Polegar: + Chegou na Catraca -->
+      <div class="bottom-sticky-bar">
+        <button id="btn-chegou-catraca" class="btn-chegada-gigante" type="button">
+          <span>+</span> Chegou na Fila da Catraca
+        </button>
+      </div>
+    </main>
+
+
+    <!-- ==============================================================
+         TELA 2: PAINEL DE ADMINISTRAÇÃO
+         ============================================================== -->
+    <section id="view-admin" class="view">
+      <header class="admin-nav">
+        <button id="btn-voltar-operacao" class="btn-voltar" type="button">
+          ‹ Voltar para a Operação
+        </button>
+        <span id="admin-sync-pill" class="sync-pill synced">Nuvem ativa</span>
+      </header>
+
+      <h2 class="admin-title">Painel de Administração</h2>
+
+      <!-- Resumo Estatístico do Jantar -->
+      <div class="admin-stats-card">
+        <div class="stats-grid">
+          <div class="stat-box">
+            <div class="stat-val mono-num" id="admin-total-concluidos">0</div>
+            <div class="stat-lbl">Refeições concluídas</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val mono-num" id="admin-media-total">00:00</div>
+            <div class="stat-lbl">Tempo total médio</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val mono-num" id="admin-media-catraca-espera">00:00</div>
+            <div class="stat-lbl">Média fila catraca</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val mono-num" id="admin-media-catraca-servico">00:00</div>
+            <div class="stat-lbl">Média atend. leitor</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val mono-num" id="admin-media-comida-espera">00:00</div>
+            <div class="stat-lbl">Média fila comida</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val mono-num" id="admin-media-comida-servico">00:00</div>
+            <div class="stat-lbl">Média balcão comida</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ações Principais -->
+      <div class="admin-actions-group" style="margin-bottom: 20px;">
+        <button id="btn-exportar-csv" class="btn-admin-action primary" type="button">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          Exportar Dados para CSV
+        </button>
+      </div>
+
+      <!-- Tabela de Registros Históricos -->
+      <div class="admin-table-container">
+        <table class="records-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Chegada</th>
+              <th>Leitor</th>
+              <th>Catraca</th>
+              <th>Bandeja</th>
+              <th>Saída</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody id="tabela-admin-body">
+            <tr>
+              <td colspan="7" style="text-align: center; padding: 20px; color: var(--text-muted); font-family: inherit;">
+                Nenhum registro finalizado ainda.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Zona de Limpeza de Dados -->
+      <div class="admin-actions-group">
+        <button id="btn-limpar-local" class="btn-admin-action danger" type="button">
+          🗑️ Limpar dados locais (Reiniciar esteira)
+        </button>
+        <button id="btn-limpar-supabase" class="btn-admin-action danger" type="button">
+          ☁️ Limpar todo o banco no Supabase
+        </button>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Supabase JS Client via CDN Oficial -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Controlador da Aplicação -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
